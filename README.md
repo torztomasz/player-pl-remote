@@ -20,6 +20,12 @@ screen and the mod reloads the page, at most 3 times a minute. TizenBrew's
 `evaluateScriptOnDocumentStart` option would avoid this race, but TizenBrew never launches modules
 that set it: it waits for a page event that doesn't come.
 
+**Why it hides TVN's "unsupported browser" overlay:** logging in happens on `account.tvn.pl`, which
+parses the user agent with platform.js in an inline `<head>` script. That always runs before
+TizenBrew injects the mod, reads the TV's user agent as Safari 7, and covers the login form with
+"Nieobsługiwana przeglądarka". The engine is Chromium 120, above the gate's own Chrome 93 minimum,
+so the mod hides the overlay there; the form underneath works.
+
 ## What the remote does
 
 | Key | Browsing | Watching (video covers ≥ 60% of the screen) |
@@ -36,7 +42,7 @@ that set it: it waits for a page event that doesn't come.
 2. Change Host PC IP to `127.0.0.1` and restart the TV by holding the remote's power button until
    the Samsung logo appears. TizenBrew drives the TV's own debugger, so it needs this.
 3. In TizenBrew's module manager, choose **Add GitHub module** and enter
-   `torztomasz/player-pl-remote@v0.3.0`.
+   `torztomasz/player-pl-remote@v0.4.0`.
 4. Go back to TizenBrew's home screen and launch **Player.pl**. Selecting a module inside the
    module manager offers to remove it instead.
 
@@ -56,7 +62,8 @@ It runs only in the top frame, because TizenBrew also injects into ad and tracki
 ## Known limits
 
 - **Not yet tested on a TV.** Navigation was checked against the live player.pl in a desktop
-  browser at TV resolution: header, rows, cards, search box, cookie banner, and opening a show.
+  browser at TV resolution: header, rows, cards, search box, cookie banner, opening a show, and
+  reaching the e-mail login form on account.tvn.pl.
   Playback and the video keys still need testing on the S90F.
 - **Player may require Chrome 127+ on Linux for a reason.** If playback misbehaves on the TV, that
   stricter Linux requirement may be why.

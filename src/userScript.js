@@ -57,8 +57,13 @@
     // Capture phase, so the site's own key handlers can't swallow remote keys first.
     root.addEventListener('keydown', handleKey, true);
     // TizenBrew may inject the mod before <head> exists.
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', injectFocusStyle);
-    else injectFocusStyle();
+    whenDocumentReady(injectFocusStyle);
+    if (root.location.hostname === 'account.tvn.pl') whenDocumentReady(hideTvnBrowserGate);
+  }
+
+  function whenDocumentReady(callback) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', callback);
+    else callback();
   }
 
   // Player's site shows "watch in the app" to any user agent naming a TV (TIZEN, SMART-TV). The
@@ -364,14 +369,25 @@
   }
 
   function injectFocusStyle() {
-    const style = document.createElement('style');
-    style.textContent = `
+    addStyle(`
       [${FOCUS_MARKER}] {
         outline: 4px solid #ffd400 !important;
         outline-offset: 2px !important;
         box-shadow: 0 0 0 8px rgba(255, 212, 0, 0.35) !important;
       }
-    `;
+    `);
+  }
+
+  // Player's login page, account.tvn.pl, checks the browser in an inline <head> script that always
+  // runs before TizenBrew injects the mod. It reads the TV as Safari 7 and covers the login form with
+  // an "unsupported browser" overlay, though the engine (Chromium 120) passes its Chrome 93 minimum.
+  function hideTvnBrowserGate() {
+    addStyle('.is-old-browser-canvas { display: none !important; }');
+  }
+
+  function addStyle(css) {
+    const style = document.createElement('style');
+    style.textContent = css;
     (document.head || document.documentElement).appendChild(style);
   }
 })(typeof window !== 'undefined' ? window : globalThis);
