@@ -21,7 +21,7 @@ exactly as in a browser.
 
 1. Turn on Developer Mode on the TV and point it at your computer's IP address.
 2. Install TizenBrew, for example with [Apps2Samsung](https://github.com/Apps2Samsung/Apps2Samsung).
-3. In TizenBrew, open the module manager, add `gh/torztomasz/player-pl-remote@v0.1.0`, and
+3. In TizenBrew, open the module manager, add `torztomasz/player-pl-remote@v0.1.0`, and
    launch **Player.pl**.
 
 TizenBrew downloads modules through jsDelivr (`https://cdn.jsdelivr.net/gh/<user>/<repo>@<tag>/…`),
