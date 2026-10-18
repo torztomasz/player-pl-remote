@@ -14,6 +14,12 @@ reports the TV's real Chromium version as Chrome on Windows. It says Windows rat
 because Player's config (`playerapi/info`) requires Chrome 127+ on Linux and 110+ elsewhere, and
 2025 TVs run Chromium 120.
 
+Player reads the user agent once, when its script runs, and TizenBrew injects the mod a moment
+after the page starts. The mod usually gets there first. When it doesn't, Player shows its block
+screen and the mod reloads the page, at most 3 times a minute. TizenBrew's
+`evaluateScriptOnDocumentStart` option would avoid this race, but TizenBrew never launches modules
+that set it: it waits for a page event that doesn't come.
+
 ## What the remote does
 
 | Key | Browsing | Watching (video covers ≥ 60% of the screen) |
@@ -30,7 +36,7 @@ because Player's config (`playerapi/info`) requires Chrome 127+ on Linux and 110
 2. Change Host PC IP to `127.0.0.1` and restart the TV by holding the remote's power button until
    the Samsung logo appears. TizenBrew drives the TV's own debugger, so it needs this.
 3. In TizenBrew's module manager, choose **Add GitHub module** and enter
-   `torztomasz/player-pl-remote@v0.2.0`.
+   `torztomasz/player-pl-remote@v0.3.0`.
 4. Go back to TizenBrew's home screen and launch **Player.pl**. Selecting a module inside the
    module manager offers to remove it instead.
 

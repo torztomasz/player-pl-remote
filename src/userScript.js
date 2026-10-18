@@ -53,19 +53,42 @@
   main();
 
   function main() {
+    reloadIfBlocked();
     // Capture phase, so the site's own key handlers can't swallow remote keys first.
     root.addEventListener('keydown', handleKey, true);
-    // The mod runs at document start, before <head> exists.
+    // TizenBrew may inject the mod before <head> exists.
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', injectFocusStyle);
     else injectFocusStyle();
   }
 
-  // Player's site shows "watch in the app" to any user agent naming a TV (TIZEN, SMART-TV) and
-  // reads it once when its script loads, so this must run at document start (package.json
-  // `evaluateScriptOnDocumentStart`). The server doesn't check, and the TV's engine is Chromium.
+  // Player's site shows "watch in the app" to any user agent naming a TV (TIZEN, SMART-TV). The
+  // check runs in the page, not on the server, and the TV's engine is Chromium anyway.
   function presentAsDesktopChrome() {
     const userAgent = desktopUserAgent(root.navigator.userAgent);
     Object.defineProperty(Navigator.prototype, 'userAgent', { get: () => userAgent, configurable: true });
+  }
+
+  // Player reads the user agent once, when its script runs. TizenBrew injects the mod as soon as
+  // the page's script context exists, which normally comes first; if Player won the race, it shows
+  // a block screen, and a reload gives the override another try. (TizenBrew's document-start
+  // option would avoid the race, but TizenBrew never launches modules that use it.)
+  function reloadIfBlocked() {
+    const BLOCK_TEXT = /uruchom aplikację player|ZMIEŃ PRZEGLĄDARKĘ/i;
+    const RETRIES_KEY = 'playerPlRemoteRetries';
+    // Capped, so a block the override can't fix doesn't become a reload loop.
+    const MAX_RETRIES = 3;
+    const RETRY_WINDOW_MS = 60000;
+    const WATCH_MS = 15000;
+    const started = Date.now();
+    const timer = setInterval(() => {
+      if (Date.now() - started > WATCH_MS) clearInterval(timer);
+      if (!document.body || !BLOCK_TEXT.test(document.body.textContent)) return;
+      clearInterval(timer);
+      const recent = JSON.parse(sessionStorage.getItem(RETRIES_KEY) || '[]').filter((at) => Date.now() - at < RETRY_WINDOW_MS);
+      if (recent.length >= MAX_RETRIES) return;
+      sessionStorage.setItem(RETRIES_KEY, JSON.stringify([...recent, Date.now()]));
+      root.location.reload();
+    }, 500);
   }
 
   // Keeps the engine's real Chromium version, so feature checks match what the TV can do. Claims
