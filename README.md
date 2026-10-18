@@ -36,7 +36,11 @@ so the mod hides the overlay there; the form underneath works.
 | Play/Pause, Play, Pause, Stop, ⏩, ⏪ | — | Control the video |
 
 On a show or episode page, the main button ("Oglądaj", or "Zaloguj się, by oglądać" when logged
-out) gets focus as soon as it appears, unless you've already pressed a key. For 3 seconds after
+out) gets focus as soon as it appears, unless you've already pressed a key. OK on "Oglądaj" plays
+the video fullscreen. Player's own fullscreen button only appears when a mouse moves, so the remote
+can't reach it. If the video takes longer than about 5 seconds to start, the browser no longer
+allows fullscreen for that key press, so press OK on "Oglądaj" once more. In fullscreen, arrows,
+OK and Back act on the video, as in the table's right column. For 3 seconds after
 each page load, the top-right corner shows the mod's version, so you can tell which TizenBrew
 module is running.
 
@@ -47,7 +51,7 @@ module is running.
 2. Change Host PC IP to `127.0.0.1` and restart the TV by holding the remote's power button until
    the Samsung logo appears. TizenBrew drives the TV's own debugger, so it needs this.
 3. In TizenBrew's module manager, choose **Add GitHub module** and enter
-   `torztomasz/player-pl-remote@v0.6.1`.
+   `torztomasz/player-pl-remote@v0.7.0`.
 4. Go back to TizenBrew's home screen and launch **Player.pl**. Selecting a module inside the
    module manager offers to remove it instead.
 

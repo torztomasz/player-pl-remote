@@ -4,7 +4,7 @@
 (function (root) {
   'use strict';
 
-  const VERSION = '0.6.1';
+  const VERSION = '0.7.0';
   const KEY = {
     LEFT: 37,
     UP: 38,
@@ -42,6 +42,8 @@
     '[role="option"]',
   ].join(',');
   const FOCUS_MARKER = 'data-remote-focus';
+  // Player's "Oglądaj"; the class name is the only stable handle on it.
+  const WATCH_BUTTON = 'button[class*="detail__button--in-player"]';
 
   if (typeof module === 'object' && module.exports) {
     module.exports = { pickNext, desktopUserAgent, opacityOf, VERSION };
@@ -231,7 +233,7 @@
   }
 
   function focusableCandidates() {
-    const usable = Array.from(document.querySelectorAll(FOCUSABLE_SELECTOR)).filter(isUsable);
+    const usable = Array.from(focusScope().querySelectorAll(FOCUSABLE_SELECTOR)).filter(isUsable);
     // A container with its own focusable children (e.g. the header bar) would swallow them.
     const containers = new Set();
     for (const element of usable) {
@@ -308,16 +310,56 @@
   }
 
   function focusedElement() {
-    const element = document.querySelector(`[${FOCUS_MARKER}]`);
+    const element = focusScope().querySelector(`[${FOCUS_MARKER}]`);
     return element && isUsable(element) ? element : null;
+  }
+
+  // In fullscreen only the player is on screen; the page behind it must not take focus, or OK and
+  // the arrows would act on a hidden button instead of the video.
+  function focusScope() {
+    return document.fullscreenElement || document;
   }
 
   function activate(element) {
     // While editing, Enter belongs to the field (e.g. submitting a search).
     if (isEditing(element)) return false;
     if (isTextField(element)) element.focus();
+    else if (element.matches(WATCH_BUTTON)) watchFullscreen(element);
     else element.click();
     return true;
+  }
+
+  // "Oglądaj" plays the video in a small box on the page; a TV user wants it fullscreen. The
+  // browser allows fullscreen only for about 5 seconds after a key press, so this can't wait for a
+  // slow start: if the video isn't up by then, pressing OK on "Oglądaj" again (Player keeps it
+  // there while the video plays) goes fullscreen right away.
+  function watchFullscreen(button) {
+    const ACTIVATION_MS = 4500;
+    if (playingVideo()) {
+      enterFullscreen();
+      return;
+    }
+    button.click();
+    const started = Date.now();
+    const timer = setInterval(() => {
+      if (Date.now() - started > ACTIVATION_MS) clearInterval(timer);
+      else if (playingVideo() && enterFullscreen()) clearInterval(timer);
+    }, 200);
+  }
+
+  // Player's own fullscreen button keeps its controls and subtitles. It's sized 0x0 until the mouse
+  // moves, so the remote can never reach it, but clicking it works.
+  function enterFullscreen() {
+    if (document.fullscreenElement) return true;
+    const button = Array.from(document.querySelectorAll('button[aria-label]'))
+      .find((candidate) => /pełny ekran/i.test(candidate.getAttribute('aria-label')));
+    if (!button) return false;
+    button.click();
+    return true;
+  }
+
+  function playingVideo() {
+    return Array.from(document.querySelectorAll('video')).find((video) => !video.paused && video.readyState > 2) || null;
   }
 
   function goBack(current) {
@@ -393,13 +435,13 @@
     setTimeout(() => badge.remove(), 3000);
   }
 
-  // A show or episode page's main button ("Oglądaj", or "Zaloguj się, by oglądać" when logged out)
-  // gets focus first, like the primary action in a TV app. Player switches pages without
-  // reloading, and an isolated world can't wrap the page's history API, so this polls the address.
-  // It never takes focus from an item the user already moved to, and skips buttons Player blocks
-  // while the video loads.
+  // A show or episode page's main button gets focus first, like the primary action in a TV app:
+  // "Oglądaj" whenever it's there, even while Player blocks it because a video already plays (OK on
+  // it then goes fullscreen); otherwise the first other button, such as "Zaloguj się, by oglądać".
+  // Player switches pages without reloading, and an isolated world can't wrap the page's history
+  // API, so this polls the address. It never takes focus from an item the user already moved to.
   function focusMainButtonOnEachPage() {
-    const MAIN_BUTTON = '.detail__buttons :is(a[href], button):not(.button--blocked):not(.favourite-toggle__wrapper)';
+    const OTHER_BUTTON = '.detail__buttons :is(a[href], button):not(.button--blocked):not(.favourite-toggle__wrapper)';
     const WAIT_MS = 10000;
     let page = null;
     let waitingSince = 0;
@@ -411,7 +453,8 @@
         waitingSince = Date.now();
       }
       if (!waitingSince || lastKeyAt > waitingSince || Date.now() - waitingSince > WAIT_MS) return;
-      const button = Array.from(document.querySelectorAll(MAIN_BUTTON)).find(isUsable);
+      const usableIn = (selector) => Array.from(document.querySelectorAll(selector)).find(isUsable);
+      const button = usableIn(WATCH_BUTTON) || usableIn(OTHER_BUTTON);
       if (!button) return;
       focusElement(button);
       waitingSince = 0;
