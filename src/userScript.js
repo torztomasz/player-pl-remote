@@ -47,9 +47,12 @@
     return;
   }
   presentAsDesktopChrome();
-  // TizenBrew evaluates the mod in every execution context, including ad and tracking iframes.
-  if (root.top !== root || root.__playerPlRemote) return;
-  root.__playerPlRemote = true;
+  // TizenBrew evaluates the mod in every execution context: ad and tracking iframes, and isolated
+  // worlds beside the page. Each world has its own `window` but shares the DOM, so the run-once
+  // mark lives on the DOM: one key handler per page, or one press moves focus several times.
+  const RUNNING_MARKER = 'data-player-pl-remote';
+  if (root.top !== root || document.documentElement.hasAttribute(RUNNING_MARKER)) return;
+  document.documentElement.setAttribute(RUNNING_MARKER, '');
   main();
 
   function main() {
@@ -200,18 +203,20 @@
     return best;
   }
 
-  // Gap between the edges in `direction`, or null when `to` doesn't lie ahead of `from`.
+  // Gap between the edges in `direction`, or null when `to` doesn't lie ahead of `from`. Ahead
+  // means its center lies further that way by a real margin: a tile below a button that starts at
+  // the same left edge, with its center a few pixels further left, isn't "to the left".
   function distanceAlong(from, to, direction) {
-    const center = (rect) => ({ x: (rect.left + rect.right) / 2, y: (rect.top + rect.bottom) / 2 });
-    const a = center(from);
-    const b = center(to);
-    const [isAhead, gap] = {
-      right: [b.x > a.x, to.left - from.right],
-      left: [b.x < a.x, from.left - to.right],
-      down: [b.y > a.y, to.top - from.bottom],
-      up: [b.y < a.y, from.top - to.bottom],
-    }[direction];
-    return isAhead ? Math.max(0, gap) : null;
+    const MIN_SHIFT_SHARE = 0.1;
+    const horizontal = direction === 'left' || direction === 'right';
+    const [fromStart, fromEnd, toStart, toEnd] = horizontal
+      ? [from.left, from.right, to.left, to.right]
+      : [from.top, from.bottom, to.top, to.bottom];
+    const forward = direction === 'right' || direction === 'down';
+    const shift = ((toStart + toEnd) - (fromStart + fromEnd)) / 2 * (forward ? 1 : -1);
+    const minShift = MIN_SHIFT_SHARE * Math.min(fromEnd - fromStart, toEnd - toStart);
+    if (shift <= minShift) return null;
+    return Math.max(0, forward ? toStart - fromEnd : fromStart - toEnd);
   }
 
   function distanceAcross(from, to, direction) {

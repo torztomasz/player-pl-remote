@@ -42,7 +42,7 @@ so the mod hides the overlay there; the form underneath works.
 2. Change Host PC IP to `127.0.0.1` and restart the TV by holding the remote's power button until
    the Samsung logo appears. TizenBrew drives the TV's own debugger, so it needs this.
 3. In TizenBrew's module manager, choose **Add GitHub module** and enter
-   `torztomasz/player-pl-remote@v0.4.0`.
+   `torztomasz/player-pl-remote@v0.5.0`.
 4. Go back to TizenBrew's home screen and launch **Player.pl**. Selecting a module inside the
    module manager offers to remove it instead.
 

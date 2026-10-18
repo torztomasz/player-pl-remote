@@ -55,3 +55,11 @@ test('moves to an element nested inside the current one when it lies ahead', () 
   const candidates = asCandidates({ playButton: rect(20, 240, 100, 40) });
   assert.equal(pickNext(card, candidates, 'down'), 'playButton');
 });
+
+test('ignores a tile that only looks ahead because its center is a few pixels off', () => {
+  // Player's "Oglądaj" button (324px wide) above a row of 318px cards sharing its left edge: the
+  // first card's center is 3px further left, but pressing left must not jump down to it.
+  const watchButton = rect(128, 758, 324, 40);
+  const candidates = asCandidates({ cardBelow: rect(128, 966, 318, 328) });
+  assert.equal(pickNext(watchButton, candidates, 'left'), null);
+});
