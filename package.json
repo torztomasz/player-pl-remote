@@ -1,11 +1,12 @@
 {
   "name": "player-pl-remote",
   "appName": "Player.pl",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "TizenBrew site mod that makes Player's own website usable with a Samsung TV remote: D-pad navigation, Back and media keys.",
   "packageType": "mods",
   "websiteURL": "https://player.pl/",
   "main": "src/userScript.js",
+  "evaluateScriptOnDocumentStart": true,
   "keys": [
     "MediaPlayPause",
     "MediaPlay",

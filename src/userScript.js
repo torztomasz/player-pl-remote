@@ -1,5 +1,6 @@
 // TizenBrew site mod: makes Player's own website (player.pl) usable with a Samsung TV remote.
-// It only adds focus navigation and key handling; playback and DRM are left to Player's web player.
+// It adds focus navigation and key handling and presents the TV's browser as desktop Chrome;
+// playback and DRM are left to Player's web player.
 (function (root) {
   'use strict';
 
@@ -42,18 +43,37 @@
   const FOCUS_MARKER = 'data-remote-focus';
 
   if (typeof module === 'object' && module.exports) {
-    module.exports = { pickNext };
+    module.exports = { pickNext, desktopUserAgent };
     return;
   }
+  presentAsDesktopChrome();
   // TizenBrew evaluates the mod in every execution context, including ad and tracking iframes.
   if (root.top !== root || root.__playerPlRemote) return;
   root.__playerPlRemote = true;
   main();
 
   function main() {
-    injectFocusStyle();
     // Capture phase, so the site's own key handlers can't swallow remote keys first.
     root.addEventListener('keydown', handleKey, true);
+    // The mod runs at document start, before <head> exists.
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', injectFocusStyle);
+    else injectFocusStyle();
+  }
+
+  // Player's site shows "watch in the app" to any user agent naming a TV (TIZEN, SMART-TV) and
+  // reads it once when its script loads, so this must run at document start (package.json
+  // `evaluateScriptOnDocumentStart`). The server doesn't check, and the TV's engine is Chromium.
+  function presentAsDesktopChrome() {
+    const userAgent = desktopUserAgent(root.navigator.userAgent);
+    Object.defineProperty(Navigator.prototype, 'userAgent', { get: () => userAgent, configurable: true });
+  }
+
+  // Keeps the engine's real Chromium version, so feature checks match what the TV can do. Claims
+  // Windows because Player's config (playerapi/info) wants Chrome 127+ on Linux but 110+ elsewhere,
+  // and the 2025 TVs run Chromium 120.
+  function desktopUserAgent(tvUserAgent) {
+    const chromeMajor = (tvUserAgent.match(/\b(\d{2,3})\.\d+\.\d+\.\d+\b/) || [])[1] || '120';
+    return `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromeMajor}.0.0.0 Safari/537.36`;
   }
 
   function handleKey(event) {

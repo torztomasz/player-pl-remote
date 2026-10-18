@@ -4,9 +4,15 @@ Opens Player's own website (`https://player.pl/`) on a Samsung Tizen TV through
 [TizenBrew](https://github.com/reisxd/TizenBrew) and makes it usable with the TV remote.
 
 **Why a site mod and not an app:** Player has no Tizen app for 2025 TVs, and its video is
-DRM-protected. This mod doesn't touch playback or DRM. It only adds remote-control navigation on
-top of Player's official web client, so whether video plays is decided by Player's servers,
-exactly as in a browser.
+DRM-protected. This mod doesn't touch playback or DRM. It adds remote-control navigation on top of
+Player's official web client, so whether video plays is decided by Player's servers, exactly as in
+a browser.
+
+**Why it reports desktop Chrome:** player.pl shows "watch in the app" to any browser whose user
+agent names a TV (`TIZEN`, `SMART-TV`). The check runs in the page, not on the server. The mod
+reports the TV's real Chromium version as Chrome on Windows. It says Windows rather than Linux
+because Player's config (`playerapi/info`) requires Chrome 127+ on Linux and 110+ elsewhere, and
+2025 TVs run Chromium 120.
 
 ## What the remote does
 
@@ -19,10 +25,14 @@ exactly as in a browser.
 
 ## Install
 
-1. Turn on Developer Mode on the TV and point it at your computer's IP address.
-2. Install TizenBrew, for example with [Apps2Samsung](https://github.com/Apps2Samsung/Apps2Samsung).
-3. In TizenBrew, open the module manager, add `torztomasz/player-pl-remote@v0.1.0`, and
-   launch **Player.pl**.
+1. Turn on Developer Mode on the TV with your computer's IP address as Host PC IP, and install
+   TizenBrew, for example with [Apps2Samsung](https://github.com/Apps2Samsung/Apps2Samsung).
+2. Change Host PC IP to `127.0.0.1` and restart the TV by holding the remote's power button until
+   the Samsung logo appears. TizenBrew drives the TV's own debugger, so it needs this.
+3. In TizenBrew's module manager, choose **Add GitHub module** and enter
+   `torztomasz/player-pl-remote@v0.2.0`.
+4. Go back to TizenBrew's home screen and launch **Player.pl**. Selecting a module inside the
+   module manager offers to remove it instead.
 
 TizenBrew downloads modules through jsDelivr (`https://cdn.jsdelivr.net/gh/<user>/<repo>@<tag>/…`),
 so a fork must be public to work. jsDelivr caches what it serves, so pin a release tag: each new
@@ -42,6 +52,8 @@ It runs only in the top frame, because TizenBrew also injects into ad and tracki
 - **Not yet tested on a TV.** Navigation was checked against the live player.pl in a desktop
   browser at TV resolution: header, rows, cards, search box, cookie banner, and opening a show.
   Playback and the video keys still need testing on the S90F.
+- **Player may require Chrome 127+ on Linux for a reason.** If playback misbehaves on the TV, that
+  stricter Linux requirement may be why.
 - **Playback depends on Player.** If Player's web player refuses the TV's browser engine, video
   won't play, and this mod can't change that.
 - **Cross-origin iframes are unreachable.** Remote navigation can't enter them. Player's own
