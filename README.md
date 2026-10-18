@@ -35,6 +35,11 @@ so the mod hides the overlay there; the form underneath works.
 | Back | Close the keyboard, otherwise go to the previous page | Leave fullscreen |
 | Play/Pause, Play, Pause, Stop, ⏩, ⏪ | — | Control the video |
 
+On a show or episode page, the main button ("Oglądaj", or "Zaloguj się, by oglądać" when logged
+out) gets focus as soon as it appears, unless you've already pressed a key. For 3 seconds after
+each page load, the top-right corner shows the mod's version, so you can tell which TizenBrew
+module is running.
+
 ## Install
 
 1. Turn on Developer Mode on the TV with your computer's IP address as Host PC IP, and install
@@ -42,7 +47,7 @@ so the mod hides the overlay there; the form underneath works.
 2. Change Host PC IP to `127.0.0.1` and restart the TV by holding the remote's power button until
    the Samsung logo appears. TizenBrew drives the TV's own debugger, so it needs this.
 3. In TizenBrew's module manager, choose **Add GitHub module** and enter
-   `torztomasz/player-pl-remote@v0.5.0`.
+   `torztomasz/player-pl-remote@v0.6.0`.
 4. Go back to TizenBrew's home screen and launch **Player.pl**. Selecting a module inside the
    module manager offers to remove it instead.
 
@@ -72,5 +77,6 @@ It runs only in the top frame, because TizenBrew also injects into ad and tracki
 - **Cross-origin iframes are unreachable.** Remote navigation can't enter them. Player's own
   video player and dialogs render in the main page, so this doesn't affect the main flows.
 - **The layout is Player's desktop site.** Text is small from a sofa, and Player can change its
-  markup at any time. The mod targets standard links and buttons rather than Player's class
-  names, so it should survive most redesigns.
+  markup at any time. Navigation targets standard links and buttons rather than Player's class
+  names, so it should survive most redesigns. Only the default focus on the main button relies on
+  Player's `detail__buttons` class; if that changes, the button simply won't get focus first.

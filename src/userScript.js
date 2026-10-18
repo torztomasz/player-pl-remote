@@ -4,6 +4,7 @@
 (function (root) {
   'use strict';
 
+  const VERSION = '0.6.0';
   const KEY = {
     LEFT: 37,
     UP: 38,
@@ -43,7 +44,7 @@
   const FOCUS_MARKER = 'data-remote-focus';
 
   if (typeof module === 'object' && module.exports) {
-    module.exports = { pickNext, desktopUserAgent };
+    module.exports = { pickNext, desktopUserAgent, VERSION };
     return;
   }
   presentAsDesktopChrome();
@@ -61,7 +62,9 @@
     root.addEventListener('keydown', handleKey, true);
     // TizenBrew may inject the mod before <head> exists.
     whenDocumentReady(injectFocusStyle);
+    whenDocumentReady(showVersion);
     if (root.location.hostname === 'account.tvn.pl') whenDocumentReady(hideTvnBrowserGate);
+    else focusMainButtonOnEachPage();
   }
 
   function whenDocumentReady(callback) {
@@ -371,6 +374,42 @@
     if (direction === 'left') return field.selectionStart > 0;
     if (direction === 'right') return field.selectionEnd < field.value.length;
     return false;
+  }
+
+  // Several versions of the module can sit side by side in TizenBrew, and autolaunch may point at
+  // an old one; the corner shows which one runs.
+  function showVersion() {
+    const badge = document.createElement('div');
+    badge.textContent = `Player.pl remote ${VERSION}`;
+    badge.style.cssText = 'position:fixed;top:12px;right:12px;z-index:2147483647;padding:6px 12px;' +
+      'background:rgba(0,0,0,0.75);color:#ffd400;font:16px sans-serif;border-radius:6px;pointer-events:none';
+    document.body.appendChild(badge);
+    setTimeout(() => badge.remove(), 3000);
+  }
+
+  // A show or episode page's main button ("Oglądaj", or "Zaloguj się, by oglądać" when logged out)
+  // gets focus first, like the primary action in a TV app. Player switches pages without
+  // reloading, and an isolated world can't wrap the page's history API, so this polls the address.
+  // It never takes focus from an item the user already moved to, and skips buttons Player blocks
+  // while the video loads.
+  function focusMainButtonOnEachPage() {
+    const MAIN_BUTTON = '.detail__buttons :is(a[href], button):not(.button--blocked):not(.favourite-toggle__wrapper)';
+    const WAIT_MS = 10000;
+    let page = null;
+    let waitingSince = 0;
+    let lastKeyAt = 0;
+    root.addEventListener('keydown', () => { lastKeyAt = Date.now(); }, true);
+    setInterval(() => {
+      if (root.location.href !== page) {
+        page = root.location.href;
+        waitingSince = Date.now();
+      }
+      if (!waitingSince || lastKeyAt > waitingSince || Date.now() - waitingSince > WAIT_MS) return;
+      const button = Array.from(document.querySelectorAll(MAIN_BUTTON)).find(isUsable);
+      if (!button) return;
+      focusElement(button);
+      waitingSince = 0;
+    }, 300);
   }
 
   function injectFocusStyle() {
