@@ -4,7 +4,7 @@
 (function (root) {
   'use strict';
 
-  const VERSION = '0.6.0';
+  const VERSION = '0.6.1';
   const KEY = {
     LEFT: 37,
     UP: 38,
@@ -44,7 +44,7 @@
   const FOCUS_MARKER = 'data-remote-focus';
 
   if (typeof module === 'object' && module.exports) {
-    module.exports = { pickNext, desktopUserAgent, VERSION };
+    module.exports = { pickNext, desktopUserAgent, opacityOf, VERSION };
     return;
   }
   presentAsDesktopChrome();
@@ -269,7 +269,13 @@
     const rect = element.getBoundingClientRect();
     if (rect.width < 4 || rect.height < 4) return false;
     const style = root.getComputedStyle(element);
-    return style.visibility !== 'hidden' && style.display !== 'none' && Number(style.opacity) > 0.05;
+    return style.visibility !== 'hidden' && style.display !== 'none' && opacityOf(style) > 0.05;
+  }
+
+  // The S90F's engine formats computed numbers in the TV's locale: in Polish, Player's buttons
+  // report opacity "0,9", which Number() reads as NaN.
+  function opacityOf(style) {
+    return parseFloat(style.opacity.replace(',', '.'));
   }
 
   function nearestTopLeft(candidates) {
