@@ -4,7 +4,7 @@
 (function (root) {
   'use strict';
 
-  const VERSION = '0.7.0';
+  const VERSION = '0.7.1';
   const KEY = {
     LEFT: 37,
     UP: 38,
@@ -44,6 +44,8 @@
   const FOCUS_MARKER = 'data-remote-focus';
   // Player's "Oglądaj"; the class name is the only stable handle on it.
   const WATCH_BUTTON = 'button[class*="detail__button--in-player"]';
+  // The box Player's own fullscreen button puts on screen (its web player's root element).
+  const PLAYER_BOX = '#player-holder [id^="container_"]';
 
   if (typeof module === 'object' && module.exports) {
     module.exports = { pickNext, desktopUserAgent, opacityOf, VERSION };
@@ -54,6 +56,8 @@
   // worlds beside the page. Each world has its own `window` but shares the DOM, so the run-once
   // mark lives on the DOM: one key handler per page, or one press moves focus several times.
   const RUNNING_MARKER = 'data-player-pl-remote';
+  // Set by OK on "Oglądaj" until its video plays fullscreen; see watchFullscreen.
+  let fullscreenWish = null;
   if (root.top !== root || document.documentElement.hasAttribute(RUNNING_MARKER)) return;
   document.documentElement.setAttribute(RUNNING_MARKER, '');
   main();
@@ -114,11 +118,22 @@
 
   function handleKey(event) {
     const video = watchedVideo();
-    const handled = (video && handleVideoKey(event.keyCode, video)) || handleNavigationKey(event.keyCode);
+    const handled =
+      exitFullscreenOnBack(event.keyCode) ||
+      (video && handleVideoKey(event.keyCode, video)) ||
+      handleNavigationKey(event.keyCode);
     if (handled) {
       event.preventDefault();
       event.stopPropagation();
     }
+  }
+
+  // Even between an ad and the episode, when no video is ready: Back must not leave the page.
+  function exitFullscreenOnBack(keyCode) {
+    if (keyCode !== KEY.BACK || !document.fullscreenElement) return false;
+    fullscreenWish = null;
+    document.exitFullscreen();
+    return true;
   }
 
   function handleVideoKey(keyCode, video) {
@@ -143,12 +158,6 @@
         return controlFocused ? false : seekBy(video, SEEK_SECONDS);
       case KEY.LEFT:
         return controlFocused ? false : seekBy(video, -SEEK_SECONDS);
-      case KEY.BACK:
-        if (document.fullscreenElement) {
-          document.exitFullscreen();
-          return true;
-        }
-        return false;
       default:
         return false;
     }
@@ -330,36 +339,48 @@
   }
 
   // "Oglądaj" plays the video in a small box on the page; a TV user wants it fullscreen. The
-  // browser allows fullscreen only for about 5 seconds after a key press, so this can't wait for a
-  // slow start: if the video isn't up by then, pressing OK on "Oglądaj" again (Player keeps it
-  // there while the video plays) goes fullscreen right away.
+  // browser allows fullscreen only for about 5 seconds after a key press, and the TV often needs
+  // longer to start the video, so this keeps trying until the video plays fullscreen: whenever the
+  // browser allows it again, which every key press does. Leaving the page or Back ends the wish.
   function watchFullscreen(button) {
-    const ACTIVATION_MS = 4500;
-    if (playingVideo()) {
-      enterFullscreen();
-      return;
-    }
-    button.click();
-    const started = Date.now();
-    const timer = setInterval(() => {
-      if (Date.now() - started > ACTIVATION_MS) clearInterval(timer);
-      else if (playingVideo() && enterFullscreen()) clearInterval(timer);
-    }, 200);
+    if (!playingVideo()) button.click();
+    const wish = { page: root.location.href };
+    fullscreenWish = wish;
+    const tryOnce = () => {
+      if (fullscreenWish !== wish || root.location.href !== wish.page || playingFullscreen()) {
+        if (fullscreenWish === wish) fullscreenWish = null;
+        clearInterval(timer);
+      } else if (!document.fullscreenElement && root.navigator.userActivation.isActive) {
+        enterFullscreen();
+      }
+    };
+    const timer = setInterval(tryOnce, 200);
+    tryOnce();
   }
 
-  // Player's own fullscreen button keeps its controls and subtitles. It's sized 0x0 until the mouse
-  // moves, so the remote can never reach it, but clicking it works.
+  // Player's own fullscreen button keeps its controls in step, but it only exists once the video
+  // plays (sized 0x0 until the mouse moves; clicking it works). Before that, the box it would put
+  // fullscreen is requested directly, so a slow start doesn't use up the browser's window.
   function enterFullscreen() {
-    if (document.fullscreenElement) return true;
     const button = Array.from(document.querySelectorAll('button[aria-label]'))
       .find((candidate) => /pełny ekran/i.test(candidate.getAttribute('aria-label')));
-    if (!button) return false;
-    button.click();
-    return true;
+    if (button) button.click();
+    else document.querySelector(PLAYER_BOX)?.requestFullscreen().catch(() => {});
+  }
+
+  // Player may swap its box when an ad ends, which drops fullscreen, so being fullscreen isn't
+  // enough: the video must be playing in it.
+  function playingFullscreen() {
+    const box = document.fullscreenElement;
+    return Boolean(box) && Array.from(box.querySelectorAll('video')).some(isPlaying);
   }
 
   function playingVideo() {
-    return Array.from(document.querySelectorAll('video')).find((video) => !video.paused && video.readyState > 2) || null;
+    return Array.from(document.querySelectorAll('video')).find(isPlaying) || null;
+  }
+
+  function isPlaying(video) {
+    return !video.paused && video.readyState > 2;
   }
 
   function goBack(current) {
